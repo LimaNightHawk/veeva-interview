@@ -6,123 +6,87 @@ public class Solution {
 
     private final List<Course> courses;
     private final Map<String, Course> courseMap;
-
     public Solution(List<Course> courses) {
 
         this.courses = courses;
         this.courseMap = new HashMap<>();
-        for (Course course : courses) {
+        for (Course course : this.courses) {
             courseMap.put(course.getCourseId(), course);
         }
-    }
 
+    }
     public Course getCourseById(String courseId) {
 
         return courseMap.get(courseId);
     }
 
-    public List<String> getPreRequisitesForCourse(String courseId) {
-
-        Set<String> schedule = new LinkedHashSet<>();
-
-        for (String prerequisite : courseMap.get(courseId).getPrerequisites()) {
-            addPreRequisitesForCourse(prerequisite, schedule);
-        }
-
-        // addPreRequisitesForCourse(courseId, schedule);
-
-        return schedule.stream().toList();
-    }
-
-    public void addPreRequisitesForCourse(String courseId, Set<String> schedule) {
-
-        if (schedule.contains(courseId)) {
-            return;
-        }
-
-        for (String prerequisite : courseMap.get(courseId).getPrerequisites()) {
-            addPreRequisitesForCourse(prerequisite, schedule);
-        }
-
-        schedule.add(courseId);
-    }
-
     public List<String> getClassToSchedule() {
 
-        return getClassToSchedule_dfs();
-    }
+        List<String> schedule = new ArrayList<>();
 
-    public List<String> getClassToSchedule_dfs() {
+        Map<String, List<Course>> parents = new HashMap<>();
+        Map<String, Integer> children = new HashMap<>();
 
-        Set<String> schedule = new LinkedHashSet<>();
-
-//        for (Course course : courses) {
-//            if (course.getPrerequisites().isEmpty()) {
-//                schedule.add(course.getCourseId());
-//            }
-//        }
-
-        while (schedule.size() < courses.size()) {
-            for (Course course : courses) {
-                addClassToSchedule_dfs(course.getCourseId(), schedule);
-            }
-        }
-
-        return schedule.stream().toList();
-    }
-
-    public void addClassToSchedule_dfs(String courseId, Set<String> schedule) {
-
-        if (schedule.contains(courseId)) {
-            return;
-        }
-
-        Course course = courseMap.get(courseId);
-        for (String prerequisite : course.getPrerequisites()) {
-            addClassToSchedule_dfs(prerequisite, schedule);
-        }
-
-        schedule.add(courseId);
-    }
-
-    public List<String> getClassToSchedule_Kahns() {
-
-        Map<String, List<String>> parents = new HashMap<>();
-        Map<String, Integer> childCount = new HashMap<>();
         for (Course course : courses) {
-            String courseId = course.getCourseId();
-            for (String prerequisite : course.getPrerequisites()) {
-                parents.computeIfAbsent(prerequisite, p -> new ArrayList<>()).add(courseId);
+            String parent = course.getCourseId();
+            for (String child : course.getPrerequisites()) {
+                children.put(parent, children.getOrDefault(parent, 0) + 1);
+                parents.computeIfAbsent(child, c -> new ArrayList<>()).add(course);
             }
-            childCount.put(courseId, course.getPrerequisites().size());
         }
 
         Queue<String> queue = new LinkedList<>();
         for (Course course : courses) {
-            String courseId = course.getCourseId();
-            if (childCount.get(courseId) == 0) {
-                queue.offer(courseId);
+            if (course.getPrerequisites().isEmpty()) {
+                queue.offer(course.getCourseId());
             }
         }
 
-        List<String> schedule = new ArrayList<>();
-        while (!queue.isEmpty()) {
+        while(!queue.isEmpty()){
 
-            String course = queue.poll();
-            schedule.add(course);
+            String courseId = queue.poll();
+            schedule.add(courseId);
 
-            List<String> myParents = parents.get(course);
+            Course course = courseMap.get(courseId);
+            List<Course> myParents = parents.get(courseId);
             if (myParents != null) {
-                for (String myParent : myParents) {
-                    childCount.put(myParent, childCount.get(myParent) - 1);
-                    if (childCount.get(myParent) == 0) {
-                        queue.offer(myParent);
+                for (Course myParent : myParents) {
+                    children.put(myParent.getCourseId(), children.get(myParent.getCourseId()) - 1);
+                    if (children.get(myParent.getCourseId()) == 0){
+                        queue.offer(myParent.getCourseId());
                     }
                 }
             }
         }
 
         return schedule;
+    }
+
+
+    public List<String> getPreRequisitesForCourse(String courseId) {
+
+
+        Set<String> schedule = new LinkedHashSet<>();
+
+        Course course = courseMap.get(courseId);
+        for (String prerequisite : course.getPrerequisites()) {
+            addRequisitesToSchedule(prerequisite, schedule);
+        }
+
+        return schedule.stream().toList();
+    }
+
+    public void addRequisitesToSchedule(String courseId,  Set<String> schedule) {
+        if (schedule.contains(courseId)){
+            return;
+        }
+        Course course = courseMap.get(courseId);
+        for (String prerequisite : course.getPrerequisites()) {
+            addRequisitesToSchedule(prerequisite, schedule);
+        }
+
+        schedule.add(courseId);
+
     }
 }
 
